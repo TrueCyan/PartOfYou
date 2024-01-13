@@ -18,6 +18,24 @@ namespace PartOfYou.Runtime.Logic.Level
         Undo,
         Redo
     }
+
+    public enum ColorTag
+    {
+        None,
+        White,
+    }
+
+    public enum InputType
+    {
+        Up,
+        Down,
+        Left,
+        Right,
+        Undo,
+        Redo,
+        Restart,
+    }
+
     public static class InLevelTypeConverter
     {
         public static Vector2 DirectionToVector2(Direction direction)

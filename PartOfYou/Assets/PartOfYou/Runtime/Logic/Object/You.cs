@@ -1,6 +1,4 @@
-﻿using PartOfYou.Runtime.Logic.Object;
-
-namespace PartOfYou.Runtime.Logic.Modules
+﻿namespace PartOfYou.Runtime.Logic.Object
 {
     public class You : Body
     {

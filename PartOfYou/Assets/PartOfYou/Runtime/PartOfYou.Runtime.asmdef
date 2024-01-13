@@ -1,5 +1,5 @@
 {
-    "name": "Runtime",
+    "name": "PartOfYou.Runtime",
     "rootNamespace": "",
     "references": [
         "GUID:a2c4d3a0dc31b8b4a832a7247e7c0327",

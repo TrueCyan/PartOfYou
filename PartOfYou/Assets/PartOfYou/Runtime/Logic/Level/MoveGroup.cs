@@ -18,7 +18,7 @@ namespace PartOfYou.Runtime.Logic.Level
         
         public IEnumerable<Transform> GetTransforms => _groupedBodies.Select(block => block.transform);
 
-        private MoveGroup(Direction direction)
+        public MoveGroup(Direction direction)
         {
             MoveDirection = direction;
             _groupedBodies = new List<Body>();
@@ -33,6 +33,17 @@ namespace PartOfYou.Runtime.Logic.Level
             else
             {
                 Debug.LogError("[ActionManager.cs] !! Trying to add same Body to the MoveGroup !!");
+            }
+        }
+
+        public void MergeGroup(MoveGroup moveGroup)
+        {
+            foreach (var body in moveGroup._groupedBodies)
+            {
+                if (!_groupedBodies.Contains(body))
+                {
+                    _groupedBodies.Add(body);
+                }
             }
         }
 
@@ -86,7 +97,11 @@ namespace PartOfYou.Runtime.Logic.Level
 
                 foreach (var linkedBody in next.linkedBodies)
                 {
-                    queue.Enqueue(linkedBody);
+                    var linkedGroup = GetGroup(linkedBody, direction);
+                    if (linkedBody.movable)
+                    {
+                        moveGroup.MergeGroup(linkedGroup);
+                    }
                 }
                 
                 var group = next.strongLinkedGroup;

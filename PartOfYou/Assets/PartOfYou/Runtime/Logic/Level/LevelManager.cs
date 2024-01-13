@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using PartOfYou.Runtime.Logic.Object;
+using PartOfYou.Runtime.Logic.Properties;
 using PartOfYou.Runtime.Utils;
 using UniRx;
 using Unity.Collections;
@@ -13,14 +15,21 @@ namespace PartOfYou.Runtime.Logic.Level
         public class LevelManager : SceneAnchor<LevelManager>
     {
         [SerializeField] private float moveDuration = 0.1f;
+        [SerializeField] private List<InputType> implicitUnlockedInputTypes = new()
+        {
+            InputType.Undo,
+            InputType.Redo,
+            InputType.Restart,
+        };
+        [SerializeField] private ColorTag defaultPlayerColorTag;
 
         private readonly Subject<TurnInfo> _turnStream = new();
         private readonly Stack<MoveGroup> _moveStacks = new();
         private readonly Stack<MoveGroup> _undoStacks = new();
+        private readonly Dictionary<ColorTag, List<Body>> _registeredBodies = new();
 
         public IObservable<TurnInfo> TurnObservable => _turnStream.AsObservable();
-        public Body playerBody;
-        
+
         [ReadOnly]
         private int _turnNumber;
 
@@ -30,13 +39,22 @@ namespace PartOfYou.Runtime.Logic.Level
             StartLevel().Forget();
         }
 
+        public void RegisterBody(Body body)
+        {
+            var colorTag = body is IHaveColor haveColor ? haveColor.ColorTag : ColorTag.None;
+            if (!_registeredBodies.ContainsKey(colorTag))
+            {
+                _registeredBodies.Add(colorTag, new List<Body>());
+            }
+            
+            _registeredBodies[colorTag].Add(body);
+        }
+
         private async UniTask StartLevel()
         {
-            //Todo: Load Level
-            
             await LevelActionLoop();
             
-            //Todo: Unload Level, Save Clear Info
+            //Todo: Save Clear Info, Move to Next Level (or Exit)
         }
         
         private async UniTask LevelActionLoop()
@@ -52,53 +70,124 @@ namespace PartOfYou.Runtime.Logic.Level
 
                 // turn이 끝날 때 까지 기다렸다가, input이 있었다면 마지막 input을 실행, 아니라면 새 input이 올 때 까지 기다림.
                 waitForInput = inputObservable
-                    .CombineLatest(_turnStream, (nextInput, info) => nextInput)
+                    .CombineLatest(_turnStream, (nextInput, _) => nextInput)
                     .ToUniTask(true);
-                
+
+                var targetBody = GetTargetBody(input);
+
+                if (implicitUnlockedInputTypes.Contains(input) || targetBody.Count <= 0)
+                {
+                    return;
+                }
+
                 switch (input)
                 {
-                    case Move move:
-                        await Move(playerBody, move.Direction);
+                    case InputType.Up:
+                        await MoveAsync(targetBody, Direction.Up);
                         break;
-                    case Restart _:
-                        Restart();
+                    case InputType.Down:
+                        await MoveAsync(targetBody, Direction.Down);
                         break;
-                    case Undo _:
-                        await Undo();
+                    case InputType.Left:
+                        await MoveAsync(targetBody, Direction.Left);
                         break;
-                    case Redo _:
-                        await Redo();
+                    case InputType.Right:
+                        await MoveAsync(targetBody, Direction.Right);
+                        break;
+                    case InputType.Restart:
+                        await RestartAsync();
+                        break;
+                    case InputType.Undo:
+                        await UndoAsync();
+                        break;
+                    case InputType.Redo:
+                        await RedoAsync();
                         break;
                 }
             }
         }
 
-        private void Restart()
+        private List<Body> GetTargetBody(InputType inputType)
+        {
+            var targetBodies = new List<Body>();
+            var colorSearchQueue = new Queue<ColorTag>();
+            var colorList = new List<ColorTag>();
+            colorSearchQueue.Enqueue(defaultPlayerColorTag);
+
+            while (colorSearchQueue.Count > 0)
+            {
+                AddColor(colorSearchQueue.Dequeue());
+            }
+
+            foreach (var colorTag in colorList)
+            {
+                var coloredBodies = _registeredBodies[colorTag];
+                var colorLinkedBodies = new List<Body>();
+                foreach (var coloredBody in coloredBodies)
+                {
+                    colorLinkedBodies.Add(coloredBody);
+                    colorLinkedBodies.AddRange(coloredBody.linkedBodies);
+                }
+
+                if (colorLinkedBodies.Any(x => x is IUnlockInput unlockInput && unlockInput.UnlockInput == inputType))
+                {
+                    // 연결된 body는 필요할 경우 다시 계산.
+                    targetBodies.AddRange(coloredBodies);
+                }
+            }
+
+            return targetBodies;
+
+            void AddColor(ColorTag colorTag)
+            {
+                var coloredBodies = _registeredBodies[colorTag];
+                foreach (var coloredBody in coloredBodies)
+                {
+                    colorList.Add(colorTag);
+                    
+                    var linkedBodies = coloredBody.linkedBodies;
+                    foreach (var connectToColor in linkedBodies.OfType<IConnectToColor>())
+                    {
+                        colorSearchQueue.Enqueue(connectToColor.ConnectToColorTag);
+                    }
+                }
+            }
+        }
+
+        private async UniTask RestartAsync()
         {
             _turnNumber = 0;
             //Todo: Reload Level
         }
 
-        private async UniTask Move(Body body, Direction direction)
+        private async UniTask MoveAsync(IEnumerable<Body> bodies, Direction direction)
         {
             _undoStacks.Clear();
-            var moveGroup = MoveGroup.GetGroup(body, direction);
 
-            if (!moveGroup.Movable)
-            {
-                _turnStream.OnNext(new TurnInfo(Turn.None, _turnNumber));
-                return;
-            }
+            var targetMoveGroup = new MoveGroup(direction);
             
-            _moveStacks.Push(moveGroup);
+            foreach (var body in bodies)
+            {
+                var moveGroup = MoveGroup.GetGroup(body, direction);
 
-            await MoveAsync(moveGroup, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                if (!moveGroup.Movable)
+                {
+                    _turnStream.OnNext(new TurnInfo(Turn.None, _turnNumber));
+                    continue;
+                }
+                
+                targetMoveGroup.MergeGroup(moveGroup);
+            }
+
+            _moveStacks.Push(targetMoveGroup);
+
+            await MoveAsync(targetMoveGroup, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
             
             _turnStream.OnNext(new TurnInfo(Turn.Do, _turnNumber));
             _turnNumber++;
         }
 
-        private async UniTask Undo()
+        private async UniTask UndoAsync()
         {
             if (_moveStacks.Count <= 0)
             {
@@ -116,7 +205,7 @@ namespace PartOfYou.Runtime.Logic.Level
             _turnNumber--;
         }
 
-        private async UniTask Redo()
+        private async UniTask RedoAsync()
         {
             if (_undoStacks.Count <= 0)
             {
