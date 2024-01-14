@@ -1,14 +1,16 @@
-﻿namespace PartOfYou.Runtime.Logic.Level
+﻿using System.Collections.Generic;
+
+namespace PartOfYou.Runtime.Logic.Level
 {
     public class TurnInfo
     {
-        public readonly Turn Type;
+        public readonly TurnAction Actions;
         public readonly int TurnNumber;
 
-        public TurnInfo(Turn type, int turnNumber)
+        public TurnInfo(TurnAction type, int turnNumber)
         {
-            Type = type;
             TurnNumber = turnNumber;
+            Actions = type;
         }
     }
 }

@@ -11,12 +11,13 @@ namespace PartOfYou.Runtime.Logic.Level
         Right
     }
         
-    public enum Turn
+    public enum TurnAction
     {
         None,
         Do,
         Undo,
-        Redo
+        Redo,
+        Restart,
     }
 
     public enum ColorTag

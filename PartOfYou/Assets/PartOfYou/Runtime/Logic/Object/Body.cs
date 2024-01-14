@@ -7,10 +7,8 @@ namespace PartOfYou.Runtime.Logic.Object
 {
     public abstract class Body : MonoBehaviour
     {
-        public LinkedGroup strongLinkedGroup;
-        public List<Body> linkedBodies;
-
-        public bool movable;
+        [HideInInspector] public LinkedGroup strongLinkedGroup;
+        public abstract bool Movable { get; }
 
         private void Awake()
         {

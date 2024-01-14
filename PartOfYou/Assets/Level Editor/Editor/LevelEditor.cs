@@ -227,10 +227,10 @@ public class LevelEditor : EditorWindow
 		_allPrefabs.Clear();
 
 		//Get categories
-		string[] categories = AssetDatabase.GetSubFolders("Assets/Resources/Prefab");
+		string[] categories = AssetDatabase.GetSubFolders("Assets/PartOfYou/Resources/Prefab");
 		for (var i = 0; i < categories.Length; i++)
 		{
-			categories[i] = categories[i].Replace("Assets/Resources/Prefab/", "");
+			categories[i] = categories[i].Replace("Assets/PartOfYou/Resources/Prefab/", "");
 		}
 
 		//Sort prefabs by category

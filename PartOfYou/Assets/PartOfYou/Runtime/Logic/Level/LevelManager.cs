@@ -9,10 +9,11 @@ using PartOfYou.Runtime.Utils;
 using UniRx;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace PartOfYou.Runtime.Logic.Level
 {
-        public class LevelManager : SceneAnchor<LevelManager>
+    public class LevelManager : SceneAnchor<LevelManager>
     {
         [SerializeField] private float moveDuration = 0.1f;
         [SerializeField] private List<InputType> implicitUnlockedInputTypes = new()
@@ -21,7 +22,8 @@ namespace PartOfYou.Runtime.Logic.Level
             InputType.Redo,
             InputType.Restart,
         };
-        [SerializeField] private ColorTag defaultPlayerColorTag;
+        [SerializeField] private ColorTag defaultPlayerColorTag  = ColorTag.White;
+        [SerializeField] private string nextLevel;
 
         private readonly Subject<TurnInfo> _turnStream = new();
         private readonly Stack<MoveGroup> _moveStacks = new();
@@ -53,8 +55,6 @@ namespace PartOfYou.Runtime.Logic.Level
         private async UniTask StartLevel()
         {
             await LevelActionLoop();
-            
-            //Todo: Save Clear Info, Move to Next Level (or Exit)
         }
         
         private async UniTask LevelActionLoop()
@@ -63,136 +63,245 @@ namespace PartOfYou.Runtime.Logic.Level
 
             var waitForInput = inputObservable.ToUniTask(true);
 
-            //Todo: Clear Condition
             while (true)
             {
                 var input = await waitForInput;
 
+                var availableYou = GetAvailableYou().ToList();
+
+                var availableInput = GetAvailableInput(availableYou);
+
+                var currentInputDict = availableInput
+                    .Where(x => x.Value.ContainsKey(input))
+                    .ToDictionary(x => x.Key, x => x.Value[input]);
+
+                if (!implicitUnlockedInputTypes.Contains(input)
+                    && currentInputDict.All(x => x.Value <= 0))
+                {
+                    waitForInput = inputObservable.ToUniTask(true);
+                    continue;
+                }
+                
                 // turn이 끝날 때 까지 기다렸다가, input이 있었다면 마지막 input을 실행, 아니라면 새 input이 올 때 까지 기다림.
                 waitForInput = inputObservable
                     .CombineLatest(_turnStream, (nextInput, _) => nextInput)
                     .ToUniTask(true);
 
-                var targetBody = GetTargetBody(input);
-
-                if (implicitUnlockedInputTypes.Contains(input) || targetBody.Count <= 0)
+                var turnAction = input switch
                 {
+                    InputType.Up => await MoveAsync(availableYou, currentInputDict, Direction.Up),
+                    InputType.Down => await MoveAsync(availableYou, currentInputDict, Direction.Down),
+                    InputType.Left => await MoveAsync(availableYou, currentInputDict, Direction.Left),
+                    InputType.Right => await MoveAsync(availableYou, currentInputDict, Direction.Right),
+                    InputType.Restart => RestartRequest(),
+                    InputType.Undo => await UndoAsync(),
+                    InputType.Redo => await RedoAsync(),
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+                
+                if (turnAction == TurnAction.Restart)
+                {
+                    SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                    waitForInput.DisposeUniTask();
                     return;
                 }
 
-                switch (input)
+                var cleared = availableYou
+                    .Any(LevelQuery.IsBodyOnGoal);
+
+                if (cleared)
                 {
-                    case InputType.Up:
-                        await MoveAsync(targetBody, Direction.Up);
+                    SceneManager.LoadScene(nextLevel);
+                    waitForInput.DisposeUniTask();
+                    return;
+                }
+                
+                _turnStream.OnNext(new TurnInfo(turnAction, _turnNumber));
+                switch (turnAction)
+                {
+                    case TurnAction.None:
                         break;
-                    case InputType.Down:
-                        await MoveAsync(targetBody, Direction.Down);
+                    case TurnAction.Do:
+                    case TurnAction.Redo:
+                        _turnNumber++;
                         break;
-                    case InputType.Left:
-                        await MoveAsync(targetBody, Direction.Left);
+                    case TurnAction.Undo:
+                        _turnNumber--;
                         break;
-                    case InputType.Right:
-                        await MoveAsync(targetBody, Direction.Right);
-                        break;
-                    case InputType.Restart:
-                        await RestartAsync();
-                        break;
-                    case InputType.Undo:
-                        await UndoAsync();
-                        break;
-                    case InputType.Redo:
-                        await RedoAsync();
-                        break;
+                    case TurnAction.Restart:
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
             }
         }
 
-        private List<Body> GetTargetBody(InputType inputType)
+        private IEnumerable<Body> GetAvailableYou()
         {
-            var targetBodies = new List<Body>();
-            var colorSearchQueue = new Queue<ColorTag>();
-            var colorList = new List<ColorTag>();
-            colorSearchQueue.Enqueue(defaultPlayerColorTag);
+            var allLinkedBody = new List<Body>();
+            var colorSearchQueue = new Queue<Body>();
+
+            var defaultBodies = _registeredBodies[defaultPlayerColorTag];
+            foreach (var body in defaultBodies)
+            {
+                colorSearchQueue.Enqueue(body);
+            }
 
             while (colorSearchQueue.Count > 0)
             {
-                AddColor(colorSearchQueue.Dequeue());
+                SearchColorLinkedBodies(colorSearchQueue.Dequeue());
             }
 
-            foreach (var colorTag in colorList)
+            return allLinkedBody.Where(x => x is You);
+
+            void SearchColorLinkedBodies(Body body)
             {
-                var coloredBodies = _registeredBodies[colorTag];
-                var colorLinkedBodies = new List<Body>();
-                foreach (var coloredBody in coloredBodies)
+                allLinkedBody.Add(body);
+                
+                if (body is IConnectToColor connectToColor)
                 {
-                    colorLinkedBodies.Add(coloredBody);
-                    colorLinkedBodies.AddRange(coloredBody.linkedBodies);
-                }
-
-                if (colorLinkedBodies.Any(x => x is IUnlockInput unlockInput && unlockInput.UnlockInput == inputType))
-                {
-                    // 연결된 body는 필요할 경우 다시 계산.
-                    targetBodies.AddRange(coloredBodies);
-                }
-            }
-
-            return targetBodies;
-
-            void AddColor(ColorTag colorTag)
-            {
-                var coloredBodies = _registeredBodies[colorTag];
-                foreach (var coloredBody in coloredBodies)
-                {
-                    colorList.Add(colorTag);
-                    
-                    var linkedBodies = coloredBody.linkedBodies;
-                    foreach (var connectToColor in linkedBodies.OfType<IConnectToColor>())
+                    var coloredBodies = _registeredBodies[connectToColor.ConnectToColorTag];
+                    foreach (var coloredBody in coloredBodies)
                     {
-                        colorSearchQueue.Enqueue(connectToColor.ConnectToColorTag);
+                        if (!allLinkedBody.Contains(coloredBody))
+                        {
+                            colorSearchQueue.Enqueue(coloredBody);
+                        }
                     }
                 }
+
+                if (body is You or ICanAttachToYou)
+                {
+                    var nearBodies = LevelQuery.GetNearBody(body);
+                    foreach (var nearBody in nearBodies)
+                    {
+                        if (!allLinkedBody.Contains(nearBody))
+                        {
+                            colorSearchQueue.Enqueue(nearBody);
+                        }
+                    }
+                }
+                
             }
         }
 
-        private async UniTask RestartAsync()
+        private Dictionary<ColorTag, Dictionary<InputType, int>> GetAvailableInput(IEnumerable<Body> bodies)
         {
-            _turnNumber = 0;
-            //Todo: Reload Level
+            var availableInputDict = new Dictionary<ColorTag, Dictionary<InputType, int>>();
+
+            foreach (var checkingBody in bodies)
+            {
+                if (checkingBody is not IHaveColor haveColor)
+                {
+                    continue;
+                }
+
+                var currentColor = haveColor.ColorTag;
+                if (!availableInputDict.ContainsKey(currentColor))
+                {
+                    availableInputDict.Add(currentColor, new Dictionary<InputType, int>());
+                }
+
+                var attachCheckedList = new List<Body>();
+                var attachCheckStack = new Stack<Body>();
+                attachCheckStack.Push(checkingBody);
+
+                while (attachCheckStack.Count > 0)
+                {
+                    var body = attachCheckStack.Pop();
+                    foreach (var nearBody in LevelQuery.GetNearBody(body))
+                    {
+                        if (nearBody is not ICanAttachToYou
+                            || attachCheckedList.Contains(nearBody)
+                            || attachCheckStack.Contains(nearBody))
+                        {
+                            continue;
+                        }
+                        
+                        attachCheckStack.Push(nearBody);
+
+                        if (nearBody is not IUnlockInput unlockInput)
+                        {
+                            continue;
+                        }
+
+                        if (!availableInputDict[currentColor].ContainsKey(unlockInput.UnlockInput))
+                        {
+                            availableInputDict[currentColor].Add(unlockInput.UnlockInput, 0);
+                        }
+
+                        availableInputDict[currentColor][unlockInput.UnlockInput]++;
+                    }
+
+                    attachCheckedList.Add(body);
+                }
+            }
+
+            return availableInputDict;
         }
 
-        private async UniTask MoveAsync(IEnumerable<Body> bodies, Direction direction)
+        private TurnAction RestartRequest()
+        {
+            return TurnAction.Restart;
+        }
+
+        private async UniTask<TurnAction> MoveAsync(List<Body> bodies, Dictionary<ColorTag, int> colorMoveCount, Direction direction)
         {
             _undoStacks.Clear();
 
-            var targetMoveGroup = new MoveGroup(direction);
-            
+            var moveCheckStack = new Stack<Body>();
             foreach (var body in bodies)
             {
-                var moveGroup = MoveGroup.GetGroup(body, direction);
+                moveCheckStack.Push(body);
+            }
 
+            var targetMoveGroup = new MoveGroup(direction);
+
+            while (moveCheckStack.Count > 0)
+            {
+                var body = moveCheckStack.Pop();
+                var moveGroup = MoveGroup.GetGroup(body, direction);
                 if (!moveGroup.Movable)
                 {
-                    _turnStream.OnNext(new TurnInfo(Turn.None, _turnNumber));
                     continue;
                 }
                 
                 targetMoveGroup.MergeGroup(moveGroup);
+                var nearBodies = moveGroup
+                    .GroupedBodies
+                    .SelectMany(LevelQuery.GetNearBody)
+                    .Distinct()
+                    .Where(x => x is ICanAttachToYou && !targetMoveGroup.Contains(x));
+                foreach (var nearBody in nearBodies)
+                {
+                    moveCheckStack.Push(nearBody);
+                }
             }
 
             _moveStacks.Push(targetMoveGroup);
 
             await MoveAsync(targetMoveGroup, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+
+            var newDict = colorMoveCount
+                .Where(x => x.Value > 1)
+                .ToDictionary(x => x.Key, x => x.Value - 1);
+
+            if (newDict.Count <= 0)
+            {
+                return TurnAction.Do;
+            }
             
-            _turnStream.OnNext(new TurnInfo(Turn.Do, _turnNumber));
-            _turnNumber++;
+            var newBody = bodies
+                .Where(x =>
+                    newDict.ContainsKey(x is IHaveColor color ? color.ColorTag : ColorTag.None))
+                .ToList();
+            return await MoveAsync(newBody, newDict, direction);
         }
 
-        private async UniTask UndoAsync()
+        private async UniTask<TurnAction> UndoAsync()
         {
             if (_moveStacks.Count <= 0)
             {
-                _turnStream.OnNext(new TurnInfo(Turn.None, _turnNumber));
-                return;
+                return TurnAction.None;
             }
             
             var prevMoveGroup = _moveStacks.Pop();
@@ -200,17 +309,15 @@ namespace PartOfYou.Runtime.Logic.Level
             
             var direction = prevMoveGroup.MoveDirection;
             await MoveAsync(prevMoveGroup, -InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
-            
-            _turnStream.OnNext(new TurnInfo(Turn.Undo, _turnNumber));
-            _turnNumber--;
+
+            return TurnAction.Undo;
         }
 
-        private async UniTask RedoAsync()
+        private async UniTask<TurnAction> RedoAsync()
         {
             if (_undoStacks.Count <= 0)
             {
-                _turnStream.OnNext(new TurnInfo(Turn.None, _turnNumber));
-                return;
+                return TurnAction.None;
             }
             
             var redoMoveGroup = _undoStacks.Pop();
@@ -218,9 +325,8 @@ namespace PartOfYou.Runtime.Logic.Level
             
             var direction = redoMoveGroup.MoveDirection;
             await MoveAsync(redoMoveGroup, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
-            
-            _turnStream.OnNext(new TurnInfo(Turn.Redo, _turnNumber));
-            _turnNumber++;
+
+            return TurnAction.Redo;
         }
 
         private static async UniTask MoveAsync(MoveGroup moveGroup, Vector2 dirVector2, float duration)
@@ -236,7 +342,7 @@ namespace PartOfYou.Runtime.Logic.Level
         
         private void OnDestroy()
         {
-            _turnStream.OnNext(new TurnInfo(Turn.None, _turnNumber));
+            _turnStream.OnNext(new TurnInfo(TurnAction.None, _turnNumber));
             _turnStream.OnCompleted();
             _turnStream.Dispose();
         }
