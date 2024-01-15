@@ -188,6 +188,7 @@ namespace PartOfYou.Runtime.Logic.Level
         {
             var availableInputDict = new Dictionary<ColorTag, Dictionary<InputType, int>>();
 
+            var attachCheckedForColorDict = new Dictionary<ColorTag, List<Body>>();
             foreach (var checkingBody in bodies)
             {
                 if (checkingBody is not IHaveColor haveColor)
@@ -196,12 +197,16 @@ namespace PartOfYou.Runtime.Logic.Level
                 }
 
                 var currentColor = haveColor.ColorTag;
+                if (!attachCheckedForColorDict.ContainsKey(currentColor))
+                {
+                    attachCheckedForColorDict.Add(currentColor, new List<Body>());
+                }
+
                 if (!availableInputDict.ContainsKey(currentColor))
                 {
                     availableInputDict.Add(currentColor, new Dictionary<InputType, int>());
                 }
 
-                var attachCheckedList = new List<Body>();
                 var attachCheckStack = new Stack<Body>();
                 attachCheckStack.Push(checkingBody);
 
@@ -211,7 +216,7 @@ namespace PartOfYou.Runtime.Logic.Level
                     foreach (var nearBody in LevelQuery.GetNearBody(body))
                     {
                         if (nearBody is not ICanAttachToYou
-                            || attachCheckedList.Contains(nearBody)
+                            || attachCheckedForColorDict[currentColor].Contains(nearBody)
                             || attachCheckStack.Contains(nearBody))
                         {
                             continue;
@@ -232,7 +237,7 @@ namespace PartOfYou.Runtime.Logic.Level
                         availableInputDict[currentColor][unlockInput.UnlockInput]++;
                     }
 
-                    attachCheckedList.Add(body);
+                    attachCheckedForColorDict[currentColor].Add(body);
                 }
             }
 
