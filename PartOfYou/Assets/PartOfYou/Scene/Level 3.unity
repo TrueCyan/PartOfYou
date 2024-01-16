@@ -219,7 +219,7 @@ MonoBehaviour:
   moveDuration: 0.1
   implicitUnlockedInputTypes: 040000000500000006000000
   defaultPlayerColorTag: 1
-  NextLevel: Level 4
+  nextLevel: Level 4
 --- !u!4 &64903525
 Transform:
   m_ObjectHideFlags: 0

@@ -9,6 +9,7 @@ namespace PartOfYou.Runtime.Logic.Object
     {
         [HideInInspector] public LinkedGroup strongLinkedGroup;
         public abstract bool Movable { get; }
+        private Dictionary<int, Vector3> _position;
 
         private void Awake()
         {

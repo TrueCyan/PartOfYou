@@ -25,15 +25,14 @@ namespace PartOfYou.Runtime.Logic.Level
         [SerializeField] private ColorTag defaultPlayerColorTag  = ColorTag.White;
         [SerializeField] private string nextLevel;
 
-        private readonly Subject<TurnInfo> _turnStream = new();
-        private readonly Stack<MoveGroup> _moveStacks = new();
-        private readonly Stack<MoveGroup> _undoStacks = new();
+        private readonly Subject<Unit> _turnStream = new();
+        private readonly Stack<TurnCommand> _commandStacks = new();
+        private readonly Stack<TurnCommand> _undoStacks = new();
         private readonly Dictionary<ColorTag, List<Body>> _registeredBodies = new();
 
-        public IObservable<TurnInfo> TurnObservable => _turnStream.AsObservable();
+        private List<(Body Body, Vector3 Position)> _initialSnapshot; 
 
-        [ReadOnly]
-        private int _turnNumber;
+        //public IObservable<TurnInfo> TurnObservable => _turnStream.AsObservable();
 
         public override void Awake()
         {
@@ -52,8 +51,17 @@ namespace PartOfYou.Runtime.Logic.Level
             _registeredBodies[colorTag].Add(body);
         }
 
+        private List<(Body, Vector3)> GetSnapshot()
+        {
+            return _registeredBodies
+                .SelectMany(x => x.Value)
+                .Select(x => (x, x.transform.position))
+                .ToList();
+        }
+
         private async UniTask StartLevel()
         {
+            _initialSnapshot = GetSnapshot();
             await LevelActionLoop();
         }
         
@@ -87,23 +95,31 @@ namespace PartOfYou.Runtime.Logic.Level
                     .CombineLatest(_turnStream, (nextInput, _) => nextInput)
                     .ToUniTask(true);
 
-                var turnAction = input switch
+                switch (input)
                 {
-                    InputType.Up => await MoveAsync(availableYou, currentInputDict, Direction.Up),
-                    InputType.Down => await MoveAsync(availableYou, currentInputDict, Direction.Down),
-                    InputType.Left => await MoveAsync(availableYou, currentInputDict, Direction.Left),
-                    InputType.Right => await MoveAsync(availableYou, currentInputDict, Direction.Right),
-                    InputType.Restart => RestartRequest(),
-                    InputType.Undo => await UndoAsync(),
-                    InputType.Redo => await RedoAsync(),
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-                
-                if (turnAction == TurnAction.Restart)
-                {
-                    SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-                    waitForInput.DisposeUniTask();
-                    return;
+                    case InputType.Up:
+                        await MoveAsync(availableYou, currentInputDict, Direction.Up);
+                        break;
+                    case InputType.Down:
+                        await MoveAsync(availableYou, currentInputDict, Direction.Down);
+                        break;
+                    case InputType.Left:
+                        await MoveAsync(availableYou, currentInputDict, Direction.Left);
+                        break;
+                    case InputType.Right:
+                        await MoveAsync(availableYou, currentInputDict, Direction.Right);
+                        break;
+                    case InputType.Restart:
+                        RestartCommand();
+                        break;
+                    case InputType.Undo:
+                        await UndoAsync();
+                        break;
+                    case InputType.Redo:
+                        await RedoAsync();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
 
                 var cleared = availableYou
@@ -116,22 +132,7 @@ namespace PartOfYou.Runtime.Logic.Level
                     return;
                 }
                 
-                _turnStream.OnNext(new TurnInfo(turnAction, _turnNumber));
-                switch (turnAction)
-                {
-                    case TurnAction.None:
-                        break;
-                    case TurnAction.Do:
-                    case TurnAction.Redo:
-                        _turnNumber++;
-                        break;
-                    case TurnAction.Undo:
-                        _turnNumber--;
-                        break;
-                    case TurnAction.Restart:
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                _turnStream.OnNext(Unit.Default);
             }
         }
 
@@ -244,12 +245,15 @@ namespace PartOfYou.Runtime.Logic.Level
             return availableInputDict;
         }
 
-        private TurnAction RestartRequest()
+        private void RestartCommand()
         {
-            return TurnAction.Restart;
+            _undoStacks.Clear();
+            var command = new RestartCommand(GetSnapshot(), _initialSnapshot);
+            ApplySnapshot(command.NewPos);
+            _commandStacks.Push(command);
         }
 
-        private async UniTask<TurnAction> MoveAsync(List<Body> bodies, Dictionary<ColorTag, int> colorMoveCount, Direction direction)
+        private async UniTask MoveAsync(List<Body> bodies, Dictionary<ColorTag, int> colorMoveCount, Direction direction)
         {
             _undoStacks.Clear();
 
@@ -259,32 +263,32 @@ namespace PartOfYou.Runtime.Logic.Level
                 moveCheckStack.Push(body);
             }
 
-            var targetMoveGroup = new MoveGroup(direction);
+            var moveCommand = new MoveCommand(direction);
 
             while (moveCheckStack.Count > 0)
             {
                 var body = moveCheckStack.Pop();
-                var moveGroup = MoveGroup.GetGroup(body, direction);
+                var moveGroup = MoveCommand.GetCommand(body, direction);
                 if (!moveGroup.Movable)
                 {
                     continue;
                 }
                 
-                targetMoveGroup.MergeGroup(moveGroup);
+                moveCommand.MergeTarget(moveGroup);
                 var nearBodies = moveGroup
                     .GroupedBodies
                     .SelectMany(LevelQuery.GetNearBody)
                     .Distinct()
-                    .Where(x => x is ICanAttachToYou && !targetMoveGroup.Contains(x));
+                    .Where(x => x is ICanAttachToYou && !moveCommand.Contains(x));
                 foreach (var nearBody in nearBodies)
                 {
                     moveCheckStack.Push(nearBody);
                 }
             }
 
-            _moveStacks.Push(targetMoveGroup);
+            _commandStacks.Push(moveCommand);
 
-            await MoveAsync(targetMoveGroup, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+            await MoveAsync(moveCommand, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
 
             var newDict = colorMoveCount
                 .Where(x => x.Value > 1)
@@ -292,28 +296,36 @@ namespace PartOfYou.Runtime.Logic.Level
 
             if (newDict.Count <= 0)
             {
-                return TurnAction.Do;
+                return;
             }
             
             var newBody = bodies
                 .Where(x =>
                     newDict.ContainsKey(x is IHaveColor color ? color.ColorTag : ColorTag.None))
                 .ToList();
-            return await MoveAsync(newBody, newDict, direction);
+            await MoveAsync(newBody, newDict, direction);
         }
 
         private async UniTask<TurnAction> UndoAsync()
         {
-            if (_moveStacks.Count <= 0)
+            if (_commandStacks.Count <= 0)
             {
                 return TurnAction.None;
             }
+
+            var command = _commandStacks.Pop();
+            _undoStacks.Push(command);
+            switch (command)
+            {
+                case MoveCommand moveCommand:
+                    var direction = moveCommand.MoveDirection;
+                    await MoveAsync(moveCommand, -InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                    break;
+                case RestartCommand restartCommand:
+                    ApplySnapshot(restartCommand.PrevPos);
+                    break;
+            }
             
-            var prevMoveGroup = _moveStacks.Pop();
-            _undoStacks.Push(prevMoveGroup);
-            
-            var direction = prevMoveGroup.MoveDirection;
-            await MoveAsync(prevMoveGroup, -InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
 
             return TurnAction.Undo;
         }
@@ -324,30 +336,44 @@ namespace PartOfYou.Runtime.Logic.Level
             {
                 return TurnAction.None;
             }
-            
-            var redoMoveGroup = _undoStacks.Pop();
-            _moveStacks.Push(redoMoveGroup);
-            
-            var direction = redoMoveGroup.MoveDirection;
-            await MoveAsync(redoMoveGroup, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+
+            var command = _undoStacks.Pop();
+            _commandStacks.Push(command);
+            switch (command)
+            {
+                case MoveCommand moveCommand:
+                    var direction = moveCommand.MoveDirection;
+                    await MoveAsync(moveCommand, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                    break;
+                case RestartCommand restartCommand:
+                    ApplySnapshot(restartCommand.NewPos);
+                    break;
+            }
 
             return TurnAction.Redo;
         }
 
-        private static async UniTask MoveAsync(MoveGroup moveGroup, Vector2 dirVector2, float duration)
+        private static async UniTask MoveAsync(MoveCommand moveCommand, Vector2 dirVector2, float duration)
         {
             await UniTask.WhenAll(
-                moveGroup.GetTransforms.Select(
+                moveCommand.GetTransforms.Select(
                     t => t
                         .DOTranslate(dirVector2, duration)
                         .SetEase(Ease.InOutSine)
                         .AsyncWaitForCompletion()
                         .AsUniTask()));
         }
+
+        private static void ApplySnapshot(List<(Body, Vector3)> snapshot)
+        {
+            foreach (var (body, position) in snapshot)
+            {
+                body.transform.position = position;
+            }
+        }
         
         private void OnDestroy()
         {
-            _turnStream.OnNext(new TurnInfo(TurnAction.None, _turnNumber));
             _turnStream.OnCompleted();
             _turnStream.Dispose();
         }

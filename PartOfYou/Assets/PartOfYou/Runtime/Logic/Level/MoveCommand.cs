@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PartOfYou.Runtime.Logic.Level
 {
-    public class MoveGroup
+    public class MoveCommand : TurnCommand
     {
         public readonly List<Body> GroupedBodies;
         
@@ -16,13 +16,13 @@ namespace PartOfYou.Runtime.Logic.Level
         
         public IEnumerable<Transform> GetTransforms => GroupedBodies.Select(block => block.transform);
 
-        public MoveGroup(Direction direction)
+        public MoveCommand(Direction direction)
         {
             MoveDirection = direction;
             GroupedBodies = new List<Body>();
         }
 
-        private void ExtendGroup(Body body)
+        private void ExtendTarget(Body body)
         {
             if (!GroupedBodies.Contains(body))
             {
@@ -34,9 +34,9 @@ namespace PartOfYou.Runtime.Logic.Level
             }
         }
 
-        public void MergeGroup(MoveGroup moveGroup)
+        public void MergeTarget(MoveCommand moveCommand)
         {
-            foreach (var body in moveGroup.GroupedBodies)
+            foreach (var body in moveCommand.GroupedBodies)
             {
                 if (!GroupedBodies.Contains(body))
                 {
@@ -50,9 +50,9 @@ namespace PartOfYou.Runtime.Logic.Level
             return GroupedBodies.Contains(body);
         }
         
-        public static MoveGroup GetGroup(Body body, Direction direction)
+        public static MoveCommand GetCommand(Body body, Direction direction)
         {
-            var moveGroup = new MoveGroup(direction);
+            var moveGroup = new MoveCommand(direction);
             
             var dir = InLevelTypeConverter.DirectionToVector2(direction);
 
@@ -87,7 +87,7 @@ namespace PartOfYou.Runtime.Logic.Level
                     foreach (var member
                         in group.Members.Where(member => !moveGroup.Contains(member)))
                     {
-                        moveGroup.ExtendGroup(member);
+                        moveGroup.ExtendTarget(member);
 
                         if (member.isActiveAndEnabled)
                         {
@@ -97,7 +97,7 @@ namespace PartOfYou.Runtime.Logic.Level
                 }
                 else
                 {
-                    moveGroup.ExtendGroup(next);
+                    moveGroup.ExtendTarget(next);
                     AddFrontBodyToQueue(next);
                 }
             }
