@@ -255,55 +255,57 @@ namespace PartOfYou.Runtime.Logic.Level
 
         private async UniTask MoveAsync(List<Body> bodies, Dictionary<ColorTag, int> colorMoveCount, Direction direction)
         {
-            _undoStacks.Clear();
-
-            var moveCheckStack = new Stack<Body>();
-            foreach (var body in bodies)
+            var moveCommand = new MoveCommand();
+            while (true)
             {
-                moveCheckStack.Push(body);
-            }
+                _undoStacks.Clear();
 
-            var moveCommand = new MoveCommand(direction);
-
-            while (moveCheckStack.Count > 0)
-            {
-                var body = moveCheckStack.Pop();
-                var moveGroup = MoveCommand.GetCommand(body, direction);
-                if (!moveGroup.Movable)
+                var moveCheckStack = new Stack<Body>();
+                foreach (var body in bodies)
                 {
-                    continue;
+                    moveCheckStack.Push(body);
                 }
-                
-                moveCommand.MergeTarget(moveGroup);
-                var nearBodies = moveGroup
-                    .GroupedBodies
-                    .SelectMany(LevelQuery.GetNearBody)
-                    .Distinct()
-                    .Where(x => x is ICanAttachToYou && !moveCommand.Contains(x));
-                foreach (var nearBody in nearBodies)
+
+                var moveInfo = new MoveInfo(direction);
+
+                while (moveCheckStack.Count > 0)
                 {
-                    moveCheckStack.Push(nearBody);
+                    var body = moveCheckStack.Pop();
+                    var targetMoveInfo = MoveInfo.GetCommand(body, direction);
+                    if (!targetMoveInfo.Movable)
+                    {
+                        continue;
+                    }
+
+                    moveInfo.MergeTarget(targetMoveInfo);
+                    var nearBodies = targetMoveInfo.GroupedBodies.SelectMany(LevelQuery.GetNearBody)
+                        .Distinct()
+                        .Where(x => x is ICanAttachToYou && !moveInfo.Contains(x));
+                    foreach (var nearBody in nearBodies)
+                    {
+                        moveCheckStack.Push(nearBody);
+                    }
                 }
-            }
 
-            _commandStacks.Push(moveCommand);
+                moveCommand.AddInfo(moveInfo);
 
-            await MoveAsync(moveCommand, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                await MoveAsync(moveInfo, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
 
-            var newDict = colorMoveCount
-                .Where(x => x.Value > 1)
-                .ToDictionary(x => x.Key, x => x.Value - 1);
+                var newDict = colorMoveCount.Where(x => x.Value > 1)
+                    .ToDictionary(x => x.Key, x => x.Value - 1);
 
-            if (newDict.Count <= 0)
-            {
-                return;
+                if (newDict.Count <= 0)
+                {
+                    break;
+                }
+
+                var newBody = bodies.Where(x => newDict.ContainsKey(x is IHaveColor color ? color.ColorTag : ColorTag.None))
+                    .ToList();
+                bodies = newBody;
+                colorMoveCount = newDict;
             }
             
-            var newBody = bodies
-                .Where(x =>
-                    newDict.ContainsKey(x is IHaveColor color ? color.ColorTag : ColorTag.None))
-                .ToList();
-            await MoveAsync(newBody, newDict, direction);
+            _commandStacks.Push(moveCommand);
         }
 
         private async UniTask<TurnAction> UndoAsync()
@@ -318,8 +320,12 @@ namespace PartOfYou.Runtime.Logic.Level
             switch (command)
             {
                 case MoveCommand moveCommand:
-                    var direction = moveCommand.MoveDirection;
-                    await MoveAsync(moveCommand, -InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                    foreach (var moveInfo in moveCommand.MoveInfos.Reverse())
+                    {
+                        var direction = moveInfo.MoveDirection;
+                        await MoveAsync(moveInfo, -InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                    }
+                    
                     break;
                 case RestartCommand restartCommand:
                     ApplySnapshot(restartCommand.PrevPos);
@@ -342,8 +348,12 @@ namespace PartOfYou.Runtime.Logic.Level
             switch (command)
             {
                 case MoveCommand moveCommand:
-                    var direction = moveCommand.MoveDirection;
-                    await MoveAsync(moveCommand, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                    foreach (var moveInfo in moveCommand.MoveInfos)
+                    {
+                        var direction = moveInfo.MoveDirection;
+                        await MoveAsync(moveInfo, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                    }
+
                     break;
                 case RestartCommand restartCommand:
                     ApplySnapshot(restartCommand.NewPos);
@@ -353,10 +363,10 @@ namespace PartOfYou.Runtime.Logic.Level
             return TurnAction.Redo;
         }
 
-        private static async UniTask MoveAsync(MoveCommand moveCommand, Vector2 dirVector2, float duration)
+        private static async UniTask MoveAsync(MoveInfo moveInfo, Vector2 dirVector2, float duration)
         {
             await UniTask.WhenAll(
-                moveCommand.GetTransforms.Select(
+                moveInfo.GetTransforms.Select(
                     t => t
                         .DOTranslate(dirVector2, duration)
                         .SetEase(Ease.InOutSine)

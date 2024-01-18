@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PartOfYou.Runtime.Logic.Level
 {
-    public class MoveCommand : TurnCommand
+    public class MoveInfo
     {
         public readonly List<Body> GroupedBodies;
         
@@ -16,7 +16,7 @@ namespace PartOfYou.Runtime.Logic.Level
         
         public IEnumerable<Transform> GetTransforms => GroupedBodies.Select(block => block.transform);
 
-        public MoveCommand(Direction direction)
+        public MoveInfo(Direction direction)
         {
             MoveDirection = direction;
             GroupedBodies = new List<Body>();
@@ -34,9 +34,9 @@ namespace PartOfYou.Runtime.Logic.Level
             }
         }
 
-        public void MergeTarget(MoveCommand moveCommand)
+        public void MergeTarget(MoveInfo moveInfo)
         {
-            foreach (var body in moveCommand.GroupedBodies)
+            foreach (var body in moveInfo.GroupedBodies)
             {
                 if (!GroupedBodies.Contains(body))
                 {
@@ -50,9 +50,9 @@ namespace PartOfYou.Runtime.Logic.Level
             return GroupedBodies.Contains(body);
         }
         
-        public static MoveCommand GetCommand(Body body, Direction direction)
+        public static MoveInfo GetCommand(Body body, Direction direction)
         {
-            var moveGroup = new MoveCommand(direction);
+            var moveGroup = new MoveInfo(direction);
             
             var dir = InLevelTypeConverter.DirectionToVector2(direction);
 
@@ -103,6 +103,17 @@ namespace PartOfYou.Runtime.Logic.Level
             }
             
             return moveGroup;
+        }
+    }
+
+    public class MoveCommand : TurnCommand
+    {
+        public IReadOnlyList<MoveInfo> MoveInfos => _moveInfos;
+        private readonly List<MoveInfo> _moveInfos = new();
+
+        public void AddInfo(MoveInfo moveInfo)
+        {
+            _moveInfos.Add(moveInfo);
         }
     }
 }
