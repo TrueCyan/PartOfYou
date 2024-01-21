@@ -13,7 +13,7 @@ namespace PartOfYou.Runtime.Utils
             {
                 if (_instance) return _instance;
                 
-                _instance = FindObjectOfType<T>();
+                _instance = FindFirstObjectByType<T>();
                 if (!_instance)
                 {
                     Debug.LogError("[SceneAnchor.cs] No anchor object in the scene!");

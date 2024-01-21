@@ -23,6 +23,7 @@ namespace PartOfYou.Runtime.Logic.Level
             InputType.Restart,
         };
         [SerializeField] private ColorTag defaultPlayerColorTag  = ColorTag.White;
+        [SerializeField] private bool startOnAwake;
 
         private readonly Subject<Unit> _turnStream = new();
         private readonly Stack<TurnCommand> _commandStacks = new();
@@ -39,12 +40,19 @@ namespace PartOfYou.Runtime.Logic.Level
         public override void Awake()
         {
             base.Awake();
-            StartLevel().Forget();
+            if (startOnAwake)
+            {
+                StartLevel().Forget();
+            }
         }
 
         public void SetLevelId(LevelId levelId)
         {
             _levelId = levelId;
+            if (!startOnAwake)
+            {
+                StartLevel().Forget();
+            }
         }
 
         public void RegisterBody(Body body)
@@ -78,10 +86,12 @@ namespace PartOfYou.Runtime.Logic.Level
             _initialSnapshot = GetSnapshot();
 
             LevelStatistics prevData;
+            var prevClearCount = 0;
             if (_levelId != LevelId.None)
             {
                 var playInfo = GameManager.Instance.SaveLoad.GetLevelPlayInfo(_levelId);
                 prevData = new LevelStatistics(playInfo.playTime.ToTimeSpan(), playInfo.actionCount);
+                prevClearCount = playInfo.clearCount;
             }
             else
             {
@@ -97,7 +107,7 @@ namespace PartOfYou.Runtime.Logic.Level
 
             if (_levelId != LevelId.None)
             {
-                GameManager.Instance.SaveLoad.ClearLevel(_levelId, levelStatistics);
+                GameManager.Instance.SaveLoad.ClearLevel(_levelId, levelStatistics, prevClearCount);
                 await GameManager.Instance.transition.ToStageSelect();
             }
         }

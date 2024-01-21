@@ -15,7 +15,7 @@ namespace PartOfYou.Runtime.Logic.System
 
         public void Initialize(LevelId levelId)
         {
-            var isCleared = GameManager.Instance.SaveLoad.GetLevelPlayInfo(levelId).isCleared;
+            var isCleared = GameManager.Instance.SaveLoad.GetLevelPlayInfo(levelId).clearCount > 0;
             clearMark.SetActive(isCleared);
             button.onClick.AddListener(() => GameManager.Instance.transition.OpenLevel(levelId).Forget());
             text.text = $"{(int)levelId % 1000}";

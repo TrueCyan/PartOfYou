@@ -16,13 +16,13 @@ namespace PartOfYou.Runtime.Logic.System
 
         public void AddPlayInfo(LevelPlayInfo levelPlayInfo)
         {
-            levelPlayInfoList.Add(levelPlayInfo);
             _levelPlayInfoDict[(LevelId)levelPlayInfo.levelId] = levelPlayInfo;
+            levelPlayInfoList = _levelPlayInfoDict.Values.ToList();
         }
 
         public LevelPlayInfo GetPlayInfo(LevelId levelId)
         {
-            return _levelPlayInfoDict.TryGetValue(levelId, out var playInfo) ? playInfo : new LevelPlayInfo(levelId, false, new LevelStatistics(TimeSpan.Zero, 0));
+            return _levelPlayInfoDict.TryGetValue(levelId, out var playInfo) ? playInfo : new LevelPlayInfo(levelId, 0, new LevelStatistics(TimeSpan.Zero, 0));
         }
 
         private void Initialize()
@@ -47,14 +47,14 @@ namespace PartOfYou.Runtime.Logic.System
     public class LevelPlayInfo
     {
         [SerializeField] public int levelId;
-        [SerializeField] public bool isCleared;
+        [SerializeField] public int clearCount;
         [SerializeField] public PlayTime playTime;
         [SerializeField] public int actionCount;
 
-        public LevelPlayInfo(LevelId levelId, bool isCleared, LevelStatistics levelStatistics)
+        public LevelPlayInfo(LevelId levelId, int clearCount, LevelStatistics levelStatistics)
         {
             this.levelId = (int)levelId;
-            this.isCleared = isCleared;
+            this.clearCount = clearCount;
             playTime = PlayTime.FromTimeSpan(levelStatistics.PlayTime);
             actionCount = levelStatistics.ActionCount;
         }
@@ -69,7 +69,9 @@ namespace PartOfYou.Runtime.Logic.System
 
         public static PlayTime FromTimeSpan(TimeSpan timeSpan)
         {
-            return new PlayTime((int)timeSpan.TotalHours, timeSpan.Minutes, timeSpan.Seconds + 1); // millisecond 올림 처리
+            var millisecondCeil = timeSpan.Milliseconds > 0 ? 1 : 0;
+            
+            return new PlayTime((int)timeSpan.TotalHours, timeSpan.Minutes, timeSpan.Seconds + millisecondCeil);
         }
 
         private PlayTime(int hour, int minute, int second)
@@ -82,6 +84,11 @@ namespace PartOfYou.Runtime.Logic.System
         public TimeSpan ToTimeSpan()
         {
             return new TimeSpan(hour, minute, second);
+        }
+
+        public new string ToString()
+        {
+            return $"{hour}:{minute:00}:{second:00}";
         }
     }
 }

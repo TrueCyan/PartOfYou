@@ -43,7 +43,7 @@ namespace PartOfYou.Runtime.Logic.System
             return _gameSaveSlots[SelectedSlotId].GetPlayInfo(levelId);
         }
 
-        public void ClearLevel(LevelId levelId, LevelStatistics levelStatistics)
+        public void ClearLevel(LevelId levelId, LevelStatistics levelStatistics, int prevClearCount = 0)
         {
             if (SelectedSlotId == 0)
             {
@@ -51,7 +51,7 @@ namespace PartOfYou.Runtime.Logic.System
                 return;
             }
 
-            var clearInfo = new LevelPlayInfo(levelId, true, levelStatistics);
+            var clearInfo = new LevelPlayInfo(levelId, prevClearCount + 1, levelStatistics);
             _gameSaveSlots[SelectedSlotId].AddPlayInfo(clearInfo);
             SaveData(SelectedSlotId);
         }

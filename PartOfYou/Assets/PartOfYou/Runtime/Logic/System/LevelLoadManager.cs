@@ -75,5 +75,10 @@ namespace PartOfYou.Runtime.Logic.System
 
             return _chapterList;
         }
+
+        public List<LevelId> GetAllLevelList()
+        {
+            return _levelSceneDictionary.Keys.ToList();
+        }
     }
 }
