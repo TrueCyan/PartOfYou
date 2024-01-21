@@ -120,8 +120,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1609749652620843216}
-        m_TargetAssemblyTypeName: PartOfYou.Runtime.Logic.Actions.SceneMove, PartOfYou.Runtime
+      - m_Target: {fileID: 3501606416085303252}
+        m_TargetAssemblyTypeName: PartOfYou.Runtime.Logic.Actions.ExitLevel, PartOfYou.Runtime
         m_MethodName: Execute
         m_Mode: 1
         m_Arguments:
@@ -943,7 +943,7 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 659299839165344981, guid: 8b6432bee8c62ea4e854f9733d87897c, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1609749652620843216}
+      addedObject: {fileID: 3501606416085303252}
   m_SourcePrefab: {fileID: 100100000, guid: 8b6432bee8c62ea4e854f9733d87897c, type: 3}
 --- !u!4 &241003936229011752 stripped
 Transform:
@@ -955,7 +955,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 659299839165344981, guid: 8b6432bee8c62ea4e854f9733d87897c, type: 3}
   m_PrefabInstance: {fileID: 2336090114114330404}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1609749652620843216
+--- !u!114 &3501606416085303252
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -964,7 +964,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 2976096643398120433}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 414b63b2f3c24b72b9400403fc052724, type: 3}
+  m_Script: {fileID: 11500000, guid: ceeed951184b4e9db74ce2d8db94c413, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveToScene: Stage select

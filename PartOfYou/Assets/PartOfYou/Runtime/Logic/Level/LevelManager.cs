@@ -79,6 +79,7 @@ namespace PartOfYou.Runtime.Logic.Level
                 .ToList();
         }
 
+        private bool _quitGame;
         private async UniTask StartLevel()
         {
             _levelCancellationTokenSource?.Cancel();
@@ -99,7 +100,7 @@ namespace PartOfYou.Runtime.Logic.Level
             }
 
             var startTime = DateTime.Now;
-            await LevelActionLoop();
+            var cleared = await LevelActionLoop();
             var endTime = DateTime.Now;
             var elapsedTime = endTime - startTime;
 
@@ -107,12 +108,15 @@ namespace PartOfYou.Runtime.Logic.Level
 
             if (_levelId != LevelId.None)
             {
-                GameManager.Instance.SaveLoad.ClearLevel(_levelId, levelStatistics, prevClearCount);
-                await GameManager.Instance.transition.ToStageSelect();
+                GameManager.Instance.SaveLoad.ExitLevel(_levelId, levelStatistics, prevClearCount + (cleared ? 1 : 0));
+                if (!_quitGame)
+                {
+                    await GameManager.Instance.transition.ToStageSelect();
+                }
             }
         }
 
-        private async UniTask LevelActionLoop()
+        private async UniTask<bool> LevelActionLoop()
         {
             var inputObservable = GetComponent<LevelInput>().InputAsObservable();
 
@@ -120,10 +124,13 @@ namespace PartOfYou.Runtime.Logic.Level
 
             while (true)
             {
-                var input = await waitForInput.AttachExternalCancellation(_levelCancellationTokenSource.Token);
-                if (_levelCancellationTokenSource.IsCancellationRequested)
+                var (isCanceled, input) = await waitForInput
+                    .AttachExternalCancellation(_levelCancellationTokenSource.Token)
+                    .SuppressCancellationThrow();
+                
+                if (isCanceled)
                 {
-                    return;
+                    return false;
                 }
 
                 var availableYou = GetAvailableYou().ToList();
@@ -185,11 +192,22 @@ namespace PartOfYou.Runtime.Logic.Level
                 {
                     waitForInput.DisposeUniTask();
                     await UniTask.WhenAll(youOnGoal.Select(x => x.Ascend()));
-                    return;
+                    return true;
                 }
                 
                 _turnStream.OnNext(Unit.Default);
             }
+        }
+
+        public void ExitLevel()
+        {
+            _levelCancellationTokenSource?.Cancel();
+        }
+
+        private void OnApplicationQuit()
+        {
+            _quitGame = true;
+            _levelCancellationTokenSource?.Cancel();
         }
 
         private IEnumerable<Body> GetAvailableYou()
