@@ -13,49 +13,64 @@ MonoBehaviour:
   m_Name: LevelInfo
   m_EditorClassIdentifier: 
   chapterInfoList:
-  - chapterId: 1
+  - chapterId: 101
     chapterName: Introduction of you
     levelInfoList:
-    - levelId: 1001
+    - levelId: 101001
       scene:
         asset: {fileID: 102900000, guid: fff53249fc0b71f4ea1283aa818e2765, type: 3}
         guid: fff53249fc0b71f4ea1283aa818e2765
-    - levelId: 1002
+    - levelId: 101002
       scene:
         asset: {fileID: 102900000, guid: dfaecc744bd02284986d473cc8a3266d, type: 3}
         guid: dfaecc744bd02284986d473cc8a3266d
-    - levelId: 1003
+    - levelId: 101003
       scene:
         asset: {fileID: 102900000, guid: 9d9f113bc957eae498af1e74f17a6ef7, type: 3}
         guid: 9d9f113bc957eae498af1e74f17a6ef7
-    - levelId: 1004
+    - levelId: 101004
       scene:
         asset: {fileID: 102900000, guid: 91e2dd0fa05ca5842a00e577da9deb59, type: 3}
         guid: 91e2dd0fa05ca5842a00e577da9deb59
-    - levelId: 1005
+    - levelId: 101005
       scene:
-        asset: {fileID: 102900000, guid: 5323d77a154b87549860d94b52735ea5, type: 3}
-        guid: 5323d77a154b87549860d94b52735ea5
-    - levelId: 1006
+        asset: {fileID: 102900000, guid: 7a815f2d8d7d9bd488b35f677dc55c5e, type: 3}
+        guid: 7a815f2d8d7d9bd488b35f677dc55c5e
+    - levelId: 101006
       scene:
         asset: {fileID: 102900000, guid: 6904231a5fb9f794a8d372feea8d611c, type: 3}
         guid: 6904231a5fb9f794a8d372feea8d611c
-    - levelId: 1007
+    - levelId: 101007
       scene:
         asset: {fileID: 102900000, guid: 9b19c9381b959db4fafc0932452aaa81, type: 3}
         guid: 9b19c9381b959db4fafc0932452aaa81
-  - chapterId: 2
+  - chapterId: 102
+    chapterName: Introduction of you - Challenge
+    levelInfoList:
+    - levelId: 102001
+      scene:
+        asset: {fileID: 102900000, guid: 5323d77a154b87549860d94b52735ea5, type: 3}
+        guid: 5323d77a154b87549860d94b52735ea5
+    - levelId: 102002
+      scene:
+        asset: {fileID: 102900000, guid: 502624233c24f994483e01f350b34989, type: 3}
+        guid: 502624233c24f994483e01f350b34989
+  - chapterId: 201
     chapterName: Copy of you
     levelInfoList:
-    - levelId: 2001
+    - levelId: 201001
       scene:
-        asset: {fileID: 102900000, guid: 4cedb74bb951cc141a3c018f016072cd, type: 3}
-        guid: 4cedb74bb951cc141a3c018f016072cd
-    - levelId: 2002
+        asset: {fileID: 102900000, guid: 1cd574e32997e8446bbdf41d967b9ad8, type: 3}
+        guid: 1cd574e32997e8446bbdf41d967b9ad8
+    - levelId: 201002
       scene:
         asset: {fileID: 102900000, guid: f5694b64ccbc90a4790fb28adb275cd2, type: 3}
         guid: f5694b64ccbc90a4790fb28adb275cd2
-    - levelId: 2003
+    - levelId: 201003
+      scene:
+        asset: {fileID: 102900000, guid: 4cedb74bb951cc141a3c018f016072cd, type: 3}
+        guid: 4cedb74bb951cc141a3c018f016072cd
+    - levelId: 201004
       scene:
         asset: {fileID: 102900000, guid: 3a8e2187bc2c9f043b604b8fa8dab142, type: 3}
         guid: 3a8e2187bc2c9f043b604b8fa8dab142

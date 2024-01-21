@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using PartOfYou.Runtime.Logic.Level;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace PartOfYou.Runtime.Logic.System
 {
     [Serializable]
     public class GameSave
     {
+        private const int currentSaveVersion = 1;
+        public int SaveVersion = currentSaveVersion;
         [SerializeField] public List<LevelPlayInfo> levelPlayInfoList = new();
-
         private Dictionary<LevelId, LevelPlayInfo> _levelPlayInfoDict = new();
 
         public void AddPlayInfo(LevelPlayInfo levelPlayInfo)
@@ -39,6 +39,11 @@ namespace PartOfYou.Runtime.Logic.System
         {
             var gameSave = JsonUtility.FromJson<GameSave>(json);
             gameSave.Initialize();
+            if (currentSaveVersion != gameSave.SaveVersion)
+            {
+                throw new Exception("Save is outdated.");
+            }
+
             return gameSave;
         }
     }

@@ -1630,6 +1630,10 @@ public class LevelEditor : EditorWindow
 				//ShowLog ("List was reordered");
 				//Undo.SetTransformParent(LayerList[i].transform,null,"Moved Lyers");
 				var sr = LayerList[i].transform.GetChild(k).GetComponent<SpriteRenderer>();
+				if (sr == null)
+				{
+					LayerList[i].transform.GetChild(k).GetComponentInChildren<SpriteRenderer>();
+				}
 
 				if (!sr) sr.sortingOrder = LayerList.Count - i;
 			}

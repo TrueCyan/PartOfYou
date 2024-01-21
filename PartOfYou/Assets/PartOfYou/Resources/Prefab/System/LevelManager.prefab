@@ -225,7 +225,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &8256713438465631617
 RectTransform:
   m_ObjectHideFlags: 0
@@ -761,6 +761,7 @@ MonoBehaviour:
   implicitUnlockedInputTypes: 040000000500000006000000
   defaultPlayerColorTag: 1
   startOnAwake: 0
+  letterBox: {fileID: 3206452253229655809}
 --- !u!114 &7834683461149409358
 MonoBehaviour:
   m_ObjectHideFlags: 0

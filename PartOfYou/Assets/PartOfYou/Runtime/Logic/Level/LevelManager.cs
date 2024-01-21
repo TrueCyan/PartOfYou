@@ -24,6 +24,7 @@ namespace PartOfYou.Runtime.Logic.Level
         };
         [SerializeField] private ColorTag defaultPlayerColorTag  = ColorTag.White;
         [SerializeField] private bool startOnAwake;
+        [SerializeField] private GameObject letterBox;
 
         private readonly Subject<Unit> _turnStream = new();
         private readonly Stack<TurnCommand> _commandStacks = new();
@@ -40,6 +41,10 @@ namespace PartOfYou.Runtime.Logic.Level
         public override void Awake()
         {
             base.Awake();
+            if (letterBox.Exists())
+            {
+                letterBox.SetActive(true);
+            }
             if (startOnAwake)
             {
                 StartLevel().Forget();
@@ -383,10 +388,10 @@ namespace PartOfYou.Runtime.Logic.Level
                 bodies = newBody;
                 colorMoveCount = newDict;
             }
-            
-            _commandStacks.Push(moveCommand);
+
             if (isValidMove)
             {
+                _commandStacks.Push(moveCommand);
                 _actionCount++;
             }
         }
