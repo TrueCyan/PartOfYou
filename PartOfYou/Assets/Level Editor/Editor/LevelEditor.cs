@@ -2,8 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq.Expressions;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -227,17 +225,17 @@ public class LevelEditor : EditorWindow
 		_allPrefabs.Clear();
 
 		//Get categories
-		string[] categories = AssetDatabase.GetSubFolders("Assets/PartOfYou/Resources/Prefab");
+		string[] categories = AssetDatabase.GetSubFolders("Assets/PartOfYou/Resources/Prefab/LevelComponents");
 		for (var i = 0; i < categories.Length; i++)
 		{
-			categories[i] = categories[i].Replace("Assets/PartOfYou/Resources/Prefab/", "");
+			categories[i] = categories[i].Replace("Assets/PartOfYou/Resources/Prefab/LevelComponents/", "");
 		}
 
 		//Sort prefabs by category
 		foreach (var category in categories)
 		{
 			//adds to the list all prefabs on the resources folder
-			var loadedObjects = Resources.LoadAll("Prefab/" + category);
+			var loadedObjects = Resources.LoadAll("Prefab/LevelComponents/" + category);
 			if (loadedObjects.Length > 0)
 			{
 				if (_prefabCategory.ContainsKey(category))

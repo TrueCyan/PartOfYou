@@ -75,5 +75,13 @@ namespace PartOfYou.Runtime.Logic.Level
             var pos = (Vector2)body.transform.position;
             return GoalCheck(pos);
         }
+        
+        public static Body GetBodyOnPos(Vector2 position)
+        {
+            Physics2D.queriesStartInColliders = true;
+            var hit = Physics2D.Raycast(position, Vector2.zero, 0, ObjectLayer);
+            Physics2D.queriesStartInColliders = false;
+            return hit.collider != null ? hit.collider.GetComponent<Body>() : null;
+        }
     }
 }

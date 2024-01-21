@@ -23,5 +23,6 @@ namespace PartOfYou.Runtime.Logic.Level
         public void OnRestart() => _inputStream.OnNext(InputType.Restart);
         public void OnUndo() => _inputStream.OnNext(InputType.Undo);
         public void OnRedo() => _inputStream.OnNext(InputType.Redo);
+        public void OnEnter() => _inputStream.OnNext(InputType.Enter);
     }
 }

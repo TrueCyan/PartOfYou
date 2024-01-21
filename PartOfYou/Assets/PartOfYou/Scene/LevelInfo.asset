@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c97e40d73f8b42bfb4f125dc0534313a, type: 3}
+  m_Name: LevelInfo
+  m_EditorClassIdentifier: 
+  chapterInfoList:
+  - chapterId: 1
+    chapterName: Introduction of you
+    levelInfoList:
+    - levelId: 1001
+      scene:
+        asset: {fileID: 102900000, guid: fff53249fc0b71f4ea1283aa818e2765, type: 3}
+        guid: fff53249fc0b71f4ea1283aa818e2765
+    - levelId: 1002
+      scene:
+        asset: {fileID: 102900000, guid: dfaecc744bd02284986d473cc8a3266d, type: 3}
+        guid: dfaecc744bd02284986d473cc8a3266d
+    - levelId: 1003
+      scene:
+        asset: {fileID: 102900000, guid: 9d9f113bc957eae498af1e74f17a6ef7, type: 3}
+        guid: 9d9f113bc957eae498af1e74f17a6ef7
+    - levelId: 1004
+      scene:
+        asset: {fileID: 102900000, guid: 91e2dd0fa05ca5842a00e577da9deb59, type: 3}
+        guid: 91e2dd0fa05ca5842a00e577da9deb59
+    - levelId: 1005
+      scene:
+        asset: {fileID: 102900000, guid: 5323d77a154b87549860d94b52735ea5, type: 3}
+        guid: 5323d77a154b87549860d94b52735ea5
+    - levelId: 1006
+      scene:
+        asset: {fileID: 102900000, guid: 6904231a5fb9f794a8d372feea8d611c, type: 3}
+        guid: 6904231a5fb9f794a8d372feea8d611c
+    - levelId: 1007
+      scene:
+        asset: {fileID: 102900000, guid: 9b19c9381b959db4fafc0932452aaa81, type: 3}
+        guid: 9b19c9381b959db4fafc0932452aaa81
+  - chapterId: 2
+    chapterName: Copy of you
+    levelInfoList:
+    - levelId: 2001
+      scene:
+        asset: {fileID: 102900000, guid: 4cedb74bb951cc141a3c018f016072cd, type: 3}
+        guid: 4cedb74bb951cc141a3c018f016072cd
+    - levelId: 2002
+      scene:
+        asset: {fileID: 102900000, guid: f5694b64ccbc90a4790fb28adb275cd2, type: 3}
+        guid: f5694b64ccbc90a4790fb28adb275cd2
+    - levelId: 2003
+      scene:
+        asset: {fileID: 102900000, guid: 3a8e2187bc2c9f043b604b8fa8dab142, type: 3}
+        guid: 3a8e2187bc2c9f043b604b8fa8dab142

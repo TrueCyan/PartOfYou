@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using PartOfYou.Runtime.Logic.Object;
 using PartOfYou.Runtime.Logic.Properties;
+using PartOfYou.Runtime.Logic.System;
 using PartOfYou.Runtime.Utils;
 using UniRx;
-using Unity.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace PartOfYou.Runtime.Logic.Level
 {
@@ -23,21 +23,28 @@ namespace PartOfYou.Runtime.Logic.Level
             InputType.Restart,
         };
         [SerializeField] private ColorTag defaultPlayerColorTag  = ColorTag.White;
-        [SerializeField] private string nextLevel;
 
         private readonly Subject<Unit> _turnStream = new();
         private readonly Stack<TurnCommand> _commandStacks = new();
         private readonly Stack<TurnCommand> _undoStacks = new();
         private readonly Dictionary<ColorTag, List<Body>> _registeredBodies = new();
 
-        private List<(Body Body, Vector3 Position)> _initialSnapshot; 
+        private List<(Body Body, Vector3 Position)> _initialSnapshot;
 
-        //public IObservable<TurnInfo> TurnObservable => _turnStream.AsObservable();
+        private readonly List<Sensor> _sensors = new();
+        private int _actionCount;
+        private LevelId _levelId;
+        private CancellationTokenSource _levelCancellationTokenSource;
 
         public override void Awake()
         {
             base.Awake();
             StartLevel().Forget();
+        }
+
+        public void SetLevelId(LevelId levelId)
+        {
+            _levelId = levelId;
         }
 
         public void RegisterBody(Body body)
@@ -51,6 +58,11 @@ namespace PartOfYou.Runtime.Logic.Level
             _registeredBodies[colorTag].Add(body);
         }
 
+        public void RegisterSensor(Sensor sensor)
+        {
+            _sensors.Add(sensor);
+        }
+
         private List<(Body, Vector3)> GetSnapshot()
         {
             return _registeredBodies
@@ -61,10 +73,35 @@ namespace PartOfYou.Runtime.Logic.Level
 
         private async UniTask StartLevel()
         {
+            _levelCancellationTokenSource?.Cancel();
+            _levelCancellationTokenSource = new CancellationTokenSource();
             _initialSnapshot = GetSnapshot();
+
+            LevelStatistics prevData;
+            if (_levelId != LevelId.None)
+            {
+                var playInfo = GameManager.Instance.SaveLoad.GetLevelPlayInfo(_levelId);
+                prevData = new LevelStatistics(playInfo.playTime.ToTimeSpan(), playInfo.actionCount);
+            }
+            else
+            {
+                prevData = new LevelStatistics(TimeSpan.Zero, 0);
+            }
+
+            var startTime = DateTime.Now;
             await LevelActionLoop();
+            var endTime = DateTime.Now;
+            var elapsedTime = endTime - startTime;
+
+            var levelStatistics = new LevelStatistics(prevData.PlayTime + elapsedTime, prevData.ActionCount + _actionCount);
+
+            if (_levelId != LevelId.None)
+            {
+                GameManager.Instance.SaveLoad.ClearLevel(_levelId, levelStatistics);
+                await GameManager.Instance.transition.ToStageSelect();
+            }
         }
-        
+
         private async UniTask LevelActionLoop()
         {
             var inputObservable = GetComponent<LevelInput>().InputAsObservable();
@@ -73,7 +110,11 @@ namespace PartOfYou.Runtime.Logic.Level
 
             while (true)
             {
-                var input = await waitForInput;
+                var input = await waitForInput.AttachExternalCancellation(_levelCancellationTokenSource.Token);
+                if (_levelCancellationTokenSource.IsCancellationRequested)
+                {
+                    return;
+                }
 
                 var availableYou = GetAvailableYou().ToList();
 
@@ -118,17 +159,22 @@ namespace PartOfYou.Runtime.Logic.Level
                     case InputType.Redo:
                         await RedoAsync();
                         break;
+                    case InputType.Enter:
+                        await ActivateAsync();
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
 
-                var cleared = availableYou
-                    .Any(LevelQuery.IsBodyOnGoal);
+                var youOnGoal = availableYou
+                    .OfType<You>()
+                    .Where(LevelQuery.IsBodyOnGoal)
+                    .ToList();
 
-                if (cleared)
+                if (youOnGoal.Any())
                 {
-                    SceneManager.LoadScene(nextLevel);
                     waitForInput.DisposeUniTask();
+                    await UniTask.WhenAll(youOnGoal.Select(x => x.Ascend()));
                     return;
                 }
                 
@@ -255,6 +301,7 @@ namespace PartOfYou.Runtime.Logic.Level
 
         private async UniTask MoveAsync(List<Body> bodies, Dictionary<ColorTag, int> colorMoveCount, Direction direction)
         {
+            var isValidMove = false;
             var moveCommand = new MoveCommand();
             while (true)
             {
@@ -290,6 +337,10 @@ namespace PartOfYou.Runtime.Logic.Level
                 moveCommand.AddInfo(moveInfo);
 
                 await MoveAsync(moveInfo, InLevelTypeConverter.DirectionToVector2(direction), moveDuration);
+                if (moveInfo.GroupedBodies.Count > 0)
+                {
+                    isValidMove = true;
+                }
 
                 var newDict = colorMoveCount.Where(x => x.Value > 1)
                     .ToDictionary(x => x.Key, x => x.Value - 1);
@@ -306,6 +357,10 @@ namespace PartOfYou.Runtime.Logic.Level
             }
             
             _commandStacks.Push(moveCommand);
+            if (isValidMove)
+            {
+                _actionCount++;
+            }
         }
 
         private async UniTask<TurnAction> UndoAsync()
@@ -374,6 +429,16 @@ namespace PartOfYou.Runtime.Logic.Level
                         .AsUniTask()));
         }
 
+        private async UniTask ActivateAsync()
+        {
+            foreach (var sensor in _sensors)
+            {
+                sensor.TryActivate();
+            }
+            
+            // Todo: 센서 활성화 동작 중 undo가 필요한 작업이 생길 경우 undo 구현.
+        }
+
         private static void ApplySnapshot(List<(Body, Vector3)> snapshot)
         {
             foreach (var (body, position) in snapshot)
@@ -384,6 +449,7 @@ namespace PartOfYou.Runtime.Logic.Level
         
         private void OnDestroy()
         {
+            _levelCancellationTokenSource.Cancel();
             _turnStream.OnCompleted();
             _turnStream.Dispose();
         }

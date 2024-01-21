@@ -35,6 +35,7 @@ namespace PartOfYou.Runtime.Logic.Level
         Undo,
         Redo,
         Restart,
+        Enter,
     }
 
     public static class InLevelTypeConverter

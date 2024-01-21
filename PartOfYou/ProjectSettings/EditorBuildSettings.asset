@@ -6,6 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/PartOfYou/Scene/Title.unity
+    guid: 3ac439e3335acb8439ba1be8c81e0446
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/Stage select.unity
+    guid: 78ff83c250032b44d9ea9d000e4c4297
+  - enabled: 1
     path: Assets/PartOfYou/Scene/1 Introduction of you/1-1 You can move.unity
     guid: fff53249fc0b71f4ea1283aa818e2765
   - enabled: 1
@@ -18,8 +24,23 @@ EditorBuildSettings:
     path: Assets/PartOfYou/Scene/1 Introduction of you/1-4 Severe bottleneck.unity
     guid: 91e2dd0fa05ca5842a00e577da9deb59
   - enabled: 1
+    path: Assets/PartOfYou/Scene/1 Introduction of you/1-5 Boomerang.unity
+    guid: 5323d77a154b87549860d94b52735ea5
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/1 Introduction of you/1-6 Jailbreak.unity
+    guid: 6904231a5fb9f794a8d372feea8d611c
+  - enabled: 1
     path: Assets/PartOfYou/Scene/1 Introduction of you/1-7 Rocket launch.unity
     guid: 9b19c9381b959db4fafc0932452aaa81
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/2 Copy of you/2-1 Unblock you.unity
+    guid: 4cedb74bb951cc141a3c018f016072cd
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/2 Copy of you/2-2 Lockpick.unity
+    guid: f5694b64ccbc90a4790fb28adb275cd2
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/2 Copy of you/2-3 Pulley.unity
+    guid: 3a8e2187bc2c9f043b604b8fa8dab142
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: e9b9e594c525cb0458a09adc5fdb62ef, type: 2}
   m_UseUCBPForAssetBundles: 0
