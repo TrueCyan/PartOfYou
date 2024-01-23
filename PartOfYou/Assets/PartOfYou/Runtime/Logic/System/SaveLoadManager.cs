@@ -76,7 +76,7 @@ namespace PartOfYou.Runtime.Logic.System
                     throw new Exception("Save directory creation failed.");
                 }
 
-                using (FileStream stream = new FileStream(path, FileMode.OpenOrCreate))
+                using (FileStream stream = new FileStream(path, FileMode.Create))
                 {
                     using (StreamWriter writer = new StreamWriter(stream)) 
                     {

@@ -30,17 +30,29 @@ MonoBehaviour:
         guid: 9d9f113bc957eae498af1e74f17a6ef7
     - levelId: 101004
       scene:
+        asset: {fileID: 102900000, guid: 2146ea8ca71fa484a85edeb9e7f164ce, type: 3}
+        guid: 2146ea8ca71fa484a85edeb9e7f164ce
+    - levelId: 101005
+      scene:
         asset: {fileID: 102900000, guid: 91e2dd0fa05ca5842a00e577da9deb59, type: 3}
         guid: 91e2dd0fa05ca5842a00e577da9deb59
-    - levelId: 101005
+    - levelId: 101006
+      scene:
+        asset: {fileID: 102900000, guid: 1e203ddfbd61d034c8d9d1d01f2ffb18, type: 3}
+        guid: 1e203ddfbd61d034c8d9d1d01f2ffb18
+    - levelId: 101007
       scene:
         asset: {fileID: 102900000, guid: 7a815f2d8d7d9bd488b35f677dc55c5e, type: 3}
         guid: 7a815f2d8d7d9bd488b35f677dc55c5e
-    - levelId: 101006
+    - levelId: 101008
+      scene:
+        asset: {fileID: 102900000, guid: 087b679c5f0ba7748a5b16ae43c2d1d0, type: 3}
+        guid: 087b679c5f0ba7748a5b16ae43c2d1d0
+    - levelId: 101009
       scene:
         asset: {fileID: 102900000, guid: 6904231a5fb9f794a8d372feea8d611c, type: 3}
         guid: 6904231a5fb9f794a8d372feea8d611c
-    - levelId: 101007
+    - levelId: 101010
       scene:
         asset: {fileID: 102900000, guid: 9b19c9381b959db4fafc0932452aaa81, type: 3}
         guid: 9b19c9381b959db4fafc0932452aaa81
@@ -55,6 +67,10 @@ MonoBehaviour:
       scene:
         asset: {fileID: 102900000, guid: 502624233c24f994483e01f350b34989, type: 3}
         guid: 502624233c24f994483e01f350b34989
+    - levelId: 102003
+      scene:
+        asset: {fileID: 102900000, guid: fb42375d4d117124d81180ccf6db98ec, type: 3}
+        guid: fb42375d4d117124d81180ccf6db98ec
   - chapterId: 201
     chapterName: Copy of you
     levelInfoList:
