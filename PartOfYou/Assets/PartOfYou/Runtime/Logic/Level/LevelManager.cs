@@ -30,6 +30,7 @@ namespace PartOfYou.Runtime.Logic.Level
         private readonly Stack<TurnCommand> _commandStacks = new();
         private readonly Stack<TurnCommand> _undoStacks = new();
         private readonly Dictionary<ColorTag, List<Body>> _registeredBodies = new();
+        private readonly List<Hole> _registeredHoles = new();
 
         private List<(Body Body, Vector3 Position)> _initialSnapshot;
 
@@ -69,6 +70,11 @@ namespace PartOfYou.Runtime.Logic.Level
             }
             
             _registeredBodies[colorTag].Add(body);
+        }
+
+        public void RegisterHole(Hole hole)
+        {
+            _registeredHoles.Add(hole);
         }
 
         public void RegisterSensor(Sensor sensor)
@@ -199,6 +205,8 @@ namespace PartOfYou.Runtime.Logic.Level
                     await UniTask.WhenAll(youOnGoal.Select(x => x.Ascend()));
                     return true;
                 }
+                
+                await HoleFallAsync();
                 
                 _turnStream.OnNext(Unit.Default);
             }
@@ -418,6 +426,10 @@ namespace PartOfYou.Runtime.Logic.Level
                 case RestartCommand restartCommand:
                     ApplySnapshot(restartCommand.PrevPos);
                     break;
+                case FallCommand fallCommand:
+                    await UniTask.WhenAll(fallCommand.FallGroups.Select(x => x.Undo(moveDuration)));
+                    await UndoAsync();
+                    break;
             }
             
 
@@ -478,6 +490,75 @@ namespace PartOfYou.Runtime.Logic.Level
             {
                 body.transform.position = position;
             }
+        }
+
+        public async UniTask HoleFallAsync()
+        {
+            var checkedHole = new List<Hole>();
+            var fallGroupList = new List<FallGroup>();
+            
+            foreach (var targetHole in _registeredHoles)
+            {
+                if (checkedHole.Contains(targetHole))
+                {
+                    continue;
+                }
+                
+                var targetBody = LevelQuery.GetBodyOnPos(targetHole.transform.position);
+                if (targetBody.Exists())
+                {
+                    if (targetBody is not (ICanAttachToYou or You))
+                    {
+                        fallGroupList.Add(new FallGroup(new List<Body>{targetBody}));
+                        checkedHole.Add(targetHole);
+                        continue;
+                    }
+
+                    var bodyCheckedList = new List<Body>();
+                    var bodyHolePair = new List<(Body Body, bool IsOnHole)>();
+                    var bodyCheckQueue = new Queue<Body>();
+                    bodyCheckQueue.Enqueue(targetBody);
+
+                    while (bodyCheckQueue.Count > 0)
+                    {
+                        var body = bodyCheckQueue.Dequeue();
+                        bodyCheckedList.Add(body);
+                        var hole = LevelQuery.GetHoleOnPos(body.transform.position);
+                        if (hole.Exists())
+                        {
+                            checkedHole.Add(hole);
+                        }
+
+                        bodyHolePair.Add((body, hole != null));
+                        var nearBodies = LevelQuery.GetNearBody(body);
+                        foreach (var nearBody in nearBodies.Where(x => x is ICanAttachToYou or You))
+                        {
+                            if (bodyCheckQueue.Contains(nearBody) || bodyCheckedList.Contains(nearBody))
+                            {
+                                continue;
+                            }
+                            
+                            bodyCheckQueue.Enqueue(nearBody);
+                        }
+                    }
+
+                    if (bodyHolePair.All(x => x.IsOnHole))
+                    {
+                        fallGroupList.Add(new FallGroup(bodyCheckedList));
+                        continue;
+                    }
+
+                    if (bodyHolePair.Any(x => x.Body is You))
+                    {
+                        continue;
+                    }
+                    
+                    fallGroupList.AddRange(bodyHolePair.Where(x => x.IsOnHole).Select(x => new FallGroup(new List<Body>{x.Body})));
+                }
+            }
+
+            await UniTask.WhenAll(fallGroupList.Select(x => x.FallAsync(moveDuration)));
+            _commandStacks.Push(new FallCommand(fallGroupList));
         }
         
         private void OnDestroy()

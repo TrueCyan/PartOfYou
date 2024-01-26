@@ -83,5 +83,13 @@ namespace PartOfYou.Runtime.Logic.Level
             Physics2D.queriesStartInColliders = false;
             return hit.collider != null ? hit.collider.GetComponent<Body>() : null;
         }
+
+        public static Hole GetHoleOnPos(Vector2 position)
+        {
+            Physics2D.queriesStartInColliders = true;
+            var hit = Physics2D.Raycast(position, Vector2.zero, 0, FloorLayer);
+            Physics2D.queriesStartInColliders = false;
+            return hit.collider != null ? hit.collider.GetComponent<Hole>() : null;
+        }
     }
 }
