@@ -90,3 +90,10 @@ MonoBehaviour:
       scene:
         asset: {fileID: 102900000, guid: 3a8e2187bc2c9f043b604b8fa8dab142, type: 3}
         guid: 3a8e2187bc2c9f043b604b8fa8dab142
+  - chapterId: 301
+    chapterName: Shape of you
+    levelInfoList:
+    - levelId: 301001
+      scene:
+        asset: {fileID: 102900000, guid: 2fb5dd22390580e44bdfc13b351f0a4b, type: 3}
+        guid: 2fb5dd22390580e44bdfc13b351f0a4b

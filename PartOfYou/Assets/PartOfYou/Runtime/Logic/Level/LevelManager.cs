@@ -23,7 +23,6 @@ namespace PartOfYou.Runtime.Logic.Level
             InputType.Restart,
         };
         [SerializeField] private ColorTag defaultPlayerColorTag  = ColorTag.White;
-        [SerializeField] private bool startOnAwake;
         [SerializeField] private GameObject letterBox;
 
         private readonly Subject<Unit> _turnStream = new();
@@ -38,6 +37,7 @@ namespace PartOfYou.Runtime.Logic.Level
         private int _actionCount;
         private LevelId _levelId;
         private CancellationTokenSource _levelCancellationTokenSource;
+        private List<FallGroup> _activeFallGroups;
 
         public override void Awake()
         {
@@ -46,7 +46,7 @@ namespace PartOfYou.Runtime.Logic.Level
             {
                 letterBox.SetActive(true);
             }
-            if (startOnAwake)
+            if (FindFirstObjectByType<GameManager>() == null)
             {
                 StartLevel().Forget();
             }
@@ -55,7 +55,7 @@ namespace PartOfYou.Runtime.Logic.Level
         public void SetLevelId(LevelId levelId)
         {
             _levelId = levelId;
-            if (!startOnAwake)
+            if (FindFirstObjectByType<GameManager>() != null)
             {
                 StartLevel().Forget();
             }
@@ -96,6 +96,7 @@ namespace PartOfYou.Runtime.Logic.Level
             _levelCancellationTokenSource?.Cancel();
             _levelCancellationTokenSource = new CancellationTokenSource();
             _initialSnapshot = GetSnapshot();
+            _activeFallGroups = new List<FallGroup>();
 
             LevelStatistics prevData;
             var prevClearCount = 0;
@@ -335,9 +336,19 @@ namespace PartOfYou.Runtime.Logic.Level
         private void RestartCommand()
         {
             _undoStacks.Clear();
-            var command = new RestartCommand(GetSnapshot(), _initialSnapshot);
-            ApplySnapshot(command.NewPos);
+            var command = new RestartCommand(GetSnapshot(), _initialSnapshot, _activeFallGroups);
+            ApplyRestartCommand(command);
             _commandStacks.Push(command);
+        }
+
+        private void ApplyRestartCommand(RestartCommand restartCommand)
+        {
+            _activeFallGroups = new List<FallGroup>();
+            foreach (var activeFallGroup in restartCommand.ActiveFallGroups)
+            {
+                activeFallGroup.Unpack();
+            }
+            ApplySnapshot(restartCommand.NewPos);
         }
 
         private async UniTask MoveAsync(List<Body> bodies, Dictionary<ColorTag, int> colorMoveCount, Direction direction)
@@ -424,10 +435,19 @@ namespace PartOfYou.Runtime.Logic.Level
                     
                     break;
                 case RestartCommand restartCommand:
+                    _activeFallGroups = restartCommand.ActiveFallGroups;
                     ApplySnapshot(restartCommand.PrevPos);
+                    foreach (var activeFallGroup in restartCommand.ActiveFallGroups)
+                    {
+                        activeFallGroup.Repack();
+                    }
                     break;
                 case FallCommand fallCommand:
                     await UniTask.WhenAll(fallCommand.FallGroups.Select(x => x.Undo(moveDuration)));
+                    foreach (var fallGroup in fallCommand.FallGroups)
+                    {
+                        _activeFallGroups.Remove(fallGroup);
+                    }
                     await UndoAsync();
                     break;
             }
@@ -456,7 +476,7 @@ namespace PartOfYou.Runtime.Logic.Level
 
                     break;
                 case RestartCommand restartCommand:
-                    ApplySnapshot(restartCommand.NewPos);
+                    ApplyRestartCommand(restartCommand);
                     break;
             }
 
@@ -558,12 +578,16 @@ namespace PartOfYou.Runtime.Logic.Level
             }
 
             await UniTask.WhenAll(fallGroupList.Select(x => x.FallAsync(moveDuration)));
-            _commandStacks.Push(new FallCommand(fallGroupList));
+            _activeFallGroups.AddRange(fallGroupList);
+            if (fallGroupList.Count > 0)
+            {
+                _commandStacks.Push(new FallCommand(fallGroupList));
+            }
         }
         
         private void OnDestroy()
         {
-            _levelCancellationTokenSource.Cancel();
+            _levelCancellationTokenSource?.Cancel();
             _turnStream.OnCompleted();
             _turnStream.Dispose();
         }

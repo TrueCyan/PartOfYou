@@ -62,6 +62,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/PartOfYou/Scene/1 Introduction of you/1-8 Downstairs.unity
     guid: 087b679c5f0ba7748a5b16ae43c2d1d0
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/3 Shape of you/3-2 Filter.unity
+    guid: 2fb5dd22390580e44bdfc13b351f0a4b
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: e9b9e594c525cb0458a09adc5fdb62ef, type: 2}
   m_UseUCBPForAssetBundles: 0
