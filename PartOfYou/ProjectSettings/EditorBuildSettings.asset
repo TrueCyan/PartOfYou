@@ -63,8 +63,17 @@ EditorBuildSettings:
     path: Assets/PartOfYou/Scene/1 Introduction of you/1-8 Downstairs.unity
     guid: 087b679c5f0ba7748a5b16ae43c2d1d0
   - enabled: 1
-    path: Assets/PartOfYou/Scene/3 Shape of you/3-2 Filter.unity
+    path: Assets/PartOfYou/Scene/3 Shape of you/3-4 Filter.unity
     guid: 2fb5dd22390580e44bdfc13b351f0a4b
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/3 Shape of you/3-1 Island.unity
+    guid: bb244820be716de4db86959332cf43b1
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/3 Shape of you/3-2 Stepping stones.unity
+    guid: 8ed3abd0000fdc14abc9bc1d8c926338
+  - enabled: 1
+    path: Assets/PartOfYou/Scene/3 Shape of you/3-3 Rock climbing.unity
+    guid: 14852272e2c4c0040b1ef4e27481bbc2
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: e9b9e594c525cb0458a09adc5fdb62ef, type: 2}
   m_UseUCBPForAssetBundles: 0

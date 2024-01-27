@@ -5495,7 +5495,6 @@ MonoBehaviour:
   moveDuration: 0.1
   implicitUnlockedInputTypes: 07000000
   defaultPlayerColorTag: 1
-  startOnAwake: 1
   letterBox: {fileID: 0}
 --- !u!4 &972947229
 Transform:
@@ -11060,7 +11059,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Prototype v3
+  m_text: Prototype v4
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0c17d6a78d5846c409f802e5a6d2fc72, type: 2}
   m_sharedMaterial: {fileID: -3929999812505010218, guid: 0c17d6a78d5846c409f802e5a6d2fc72, type: 2}

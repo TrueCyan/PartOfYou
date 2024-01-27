@@ -95,5 +95,17 @@ MonoBehaviour:
     levelInfoList:
     - levelId: 301001
       scene:
+        asset: {fileID: 102900000, guid: bb244820be716de4db86959332cf43b1, type: 3}
+        guid: bb244820be716de4db86959332cf43b1
+    - levelId: 301002
+      scene:
+        asset: {fileID: 102900000, guid: 8ed3abd0000fdc14abc9bc1d8c926338, type: 3}
+        guid: 8ed3abd0000fdc14abc9bc1d8c926338
+    - levelId: 301003
+      scene:
+        asset: {fileID: 102900000, guid: 14852272e2c4c0040b1ef4e27481bbc2, type: 3}
+        guid: 14852272e2c4c0040b1ef4e27481bbc2
+    - levelId: 301004
+      scene:
         asset: {fileID: 102900000, guid: 2fb5dd22390580e44bdfc13b351f0a4b, type: 3}
         guid: 2fb5dd22390580e44bdfc13b351f0a4b
